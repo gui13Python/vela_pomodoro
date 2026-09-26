@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vela Pomodoro</title>
+<meta name="description" content="Uma vela que derrete enquanto você estuda. Timer Pomodoro com vela de verdade.">
+<meta name="theme-color" content="#120e1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main class="room">
+    <div class="candle-rig" id="candleRig">
+      <div class="flame-zone" id="flameZone">
+        <div class="glow"></div>
+        <div class="flame flame--outer" id="flameOuter"></div>
+        <div class="flame flame--inner" id="flameInner"></div>
+        <div class="flame flame--core" id="flameCore"></div>
+        <div class="wick" id="wick"></div>
+      </div>
+
+      <div class="candle-body" id="candleBody">
+        <div class="melt-pool" id="meltPool"></div>
+      </div>
+
+      <div class="candle-base"></div>
+      <div class="table-shine"></div>
+    </div>
+  </main>
+
+  <section class="panel">
+    <h1>Vela Pomodoro</h1>
+    <p class="hint">A vela derrete enquanto você foca. Quando ela acaba, é hora da pausa.</p>
+
+    <div class="timer-block">
+      <span class="phase-label" id="phaseLabel">Hora de estudar</span>
+      <span class="timer-display" id="timerDisplay">25:00</span>
+
+      <label class="color-row" for="presetSelect">
+        <span>Ciclo</span>
+        <select id="presetSelect">
+          <option value="curto">Curto — 15 min / 5 min</option>
+          <option value="classico" selected>Clássico — 25 min / 5 min</option>
+          <option value="longo">Longo — 50 min / 10 min</option>
+          <option value="maratona">Maratona — 90 min / 15 min</option>
+        </select>
+      </label>
+
+      <div class="btn-row">
+        <button id="startPauseBtn" class="toggle-btn" type="button">Iniciar</button>
+        <button id="resetBtn" class="ghost-btn" type="button">Reiniciar</button>
+      </div>
+    </div>
+
+    <label class="color-row" for="colorPicker">
+      <span>Cor da cera</span>
+      <input type="color" id="colorPicker" value="#b0223a">
+    </label>
+
+    <div class="swatches" id="swatches"></div>
+
+    <div class="sound-block">
+      <span class="block-label">Som ambiente</span>
+
+      <label class="switch-row">
+        <input type="checkbox" id="fireSoundToggle">
+        <span>Vela crepitando</span>
+      </label>
+
+      <label class="switch-row">
+        <input type="checkbox" id="focusSoundToggle" checked>
+        <span>Ruído de foco (ruído marrom)</span>
+      </label>
+
+      <label class="color-row volume-row" for="volumeRange">
+        <span>Volume</span>
+        <input type="range" id="volumeRange" min="0" max="100" value="55">
+      </label>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
