@@ -71,9 +71,13 @@
         <span>Vela crepitando</span>
       </label>
 
-      <label class="switch-row">
-        <input type="checkbox" id="focusSoundToggle" checked>
-        <span>Ruído de foco (ruído marrom)</span>
+      <label class="color-row" for="focusSoundSelect">
+        <span>Som para focar</span>
+        <select id="focusSoundSelect">
+          <option value="none">Nenhum</option>
+          <option value="piano" selected>Piano ambiente</option>
+          <option value="noise">Ruído suave</option>
+        </select>
       </label>
 
       <label class="color-row volume-row" for="volumeRange">

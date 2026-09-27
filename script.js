@@ -141,13 +141,17 @@ const pomodoro = {
 
 // ---------- Motor de áudio (tudo gerado ao vivo, sem arquivos externos) ----------
 const fireSoundToggle = document.getElementById('fireSoundToggle');
-const focusSoundToggle = document.getElementById('focusSoundToggle');
+const focusSoundSelect = document.getElementById('focusSoundSelect');
 const volumeRange = document.getElementById('volumeRange');
 
 let audioCtx = null;
 let masterGain = null;
 let fireBedGain = null;
-let focusGain = null;
+let noiseGain = null;
+let pianoBus = null;
+
+// Escala pentatônica suave, em duas oitavas — qualquer combinação de notas soa consonante
+const SCALE = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
 
 function soundShouldPlay(){
   return pomodoro.running && pomodoro.phase === 'work';
@@ -161,7 +165,7 @@ function createWhiteNoiseBuffer(ctx, seconds){
   return buffer;
 }
 
-function createBrownNoiseBuffer(ctx, seconds){
+function createSoftNoiseBuffer(ctx, seconds){
   const bufferSize = Math.floor(ctx.sampleRate * seconds);
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -170,7 +174,7 @@ function createBrownNoiseBuffer(ctx, seconds){
     const white = Math.random() * 2 - 1;
     data[i] = (lastOut + 0.02 * white) / 1.02;
     lastOut = data[i];
-    data[i] *= 3.2;
+    data[i] *= 2.2;
   }
   return buffer;
 }
@@ -195,19 +199,25 @@ function initAudio(){
   fireBed.connect(fireFilter).connect(fireBedGain).connect(masterGain);
   fireBed.start();
 
-  // Ruído marrom contínuo (foco)
-  const focusSrc = audioCtx.createBufferSource();
-  focusSrc.buffer = createBrownNoiseBuffer(audioCtx, 4);
-  focusSrc.loop = true;
-  const focusFilter = audioCtx.createBiquadFilter();
-  focusFilter.type = 'lowpass';
-  focusFilter.frequency.value = 900;
-  focusGain = audioCtx.createGain();
-  focusGain.gain.value = 0;
-  focusSrc.connect(focusFilter).connect(focusGain).connect(masterGain);
-  focusSrc.start();
+  // Ruído suave (opção alternativa ao piano)
+  const noiseSrc = audioCtx.createBufferSource();
+  noiseSrc.buffer = createSoftNoiseBuffer(audioCtx, 4);
+  noiseSrc.loop = true;
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = 'lowpass';
+  noiseFilter.frequency.value = 500;
+  noiseGain = audioCtx.createGain();
+  noiseGain.gain.value = 0;
+  noiseSrc.connect(noiseFilter).connect(noiseGain).connect(masterGain);
+  noiseSrc.start();
+
+  // Barramento do piano ambiente
+  pianoBus = audioCtx.createGain();
+  pianoBus.gain.value = 0;
+  pianoBus.connect(masterGain);
 
   scheduleCrackle();
+  scheduleNotes();
 }
 
 function spawnCracklePop(){
@@ -238,17 +248,71 @@ function scheduleCrackle(){
   }, delay);
 }
 
+function playPianoNote(freq){
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const release = 3.2 + Math.random() * 1.6;
+
+  const noteGain = audioCtx.createGain();
+  noteGain.gain.setValueAtTime(0.0001, now);
+  noteGain.gain.linearRampToValueAtTime(0.3, now + 0.03);
+  noteGain.gain.exponentialRampToValueAtTime(0.0001, now + release);
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2600;
+
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = freq;
+
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2;
+  const overtoneGain = audioCtx.createGain();
+  overtoneGain.gain.value = 0.16;
+
+  osc1.connect(filter);
+  osc2.connect(overtoneGain).connect(filter);
+  filter.connect(noteGain).connect(pianoBus);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + release + 0.3);
+  osc2.stop(now + release + 0.3);
+}
+
+function scheduleNotes(){
+  const delay = 1800 + Math.random() * 2800;
+  setTimeout(() => {
+    if (focusSoundSelect.value === 'piano' && soundShouldPlay()){
+      const freq = SCALE[Math.floor(Math.random() * SCALE.length)];
+      playPianoNote(freq);
+      if (Math.random() < 0.3){
+        setTimeout(() => {
+          if (focusSoundSelect.value === 'piano' && soundShouldPlay()){
+            playPianoNote(SCALE[Math.floor(Math.random() * SCALE.length)]);
+          }
+        }, 60);
+      }
+    }
+    scheduleNotes();
+  }, delay);
+}
+
 function updateAudioGains(){
   if (!audioCtx) return;
   const active = soundShouldPlay();
   const t = audioCtx.currentTime;
   const fireTarget = fireSoundToggle.checked && active ? 0.16 : 0;
-  const focusTarget = focusSoundToggle.checked && active ? 0.22 : 0;
+  const noiseTarget = focusSoundSelect.value === 'noise' && active ? 0.12 : 0;
+  const pianoTarget = focusSoundSelect.value === 'piano' && active ? 0.9 : 0;
   fireBedGain.gain.setTargetAtTime(fireTarget, t, 0.4);
-  focusGain.gain.setTargetAtTime(focusTarget, t, 0.4);
+  noiseGain.gain.setTargetAtTime(noiseTarget, t, 0.4);
+  pianoBus.gain.setTargetAtTime(pianoTarget, t, 0.6);
 }
 
-[fireSoundToggle, focusSoundToggle].forEach(el => {
+[fireSoundToggle, focusSoundSelect].forEach(el => {
   el.addEventListener('change', () => { initAudio(); updateAudioGains(); });
 });
 volumeRange.addEventListener('input', () => {
